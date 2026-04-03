@@ -1,0 +1,11 @@
+.git
+.next
+node_modules
+coverage
+.env
+.env.local
+*.md
+plans/
+docs/
+.claude/
+tests/

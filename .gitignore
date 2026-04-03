@@ -91,3 +91,5 @@ worktrees/
 
 # demo
 .claude/skills/ai-multimodal/assets/demo-*.claude/session-state/*.tmp
+
+/lib/generated/prisma

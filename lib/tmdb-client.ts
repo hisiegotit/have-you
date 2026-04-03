@@ -1,0 +1,133 @@
+// Server-side only — TMDB_API_KEY must never reach the client
+
+const TMDB_BASE = "https://api.themoviedb.org/3";
+const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
+
+export interface TMDBMovie {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  release_date: string;
+  vote_average: number;
+  overview: string;
+}
+
+// Raw TV show shape from TMDB (fields differ from movie)
+interface TMDBTVShow {
+  id: number;
+  name: string;
+  poster_path: string | null;
+  first_air_date: string;
+  vote_average: number;
+  overview: string;
+}
+
+export interface TMDBSearchResponse {
+  results: TMDBMovie[];
+  total_pages: number;
+  total_results: number;
+}
+
+function posterUrl(path: string | null, size = "w342"): string | null {
+  if (!path) return null;
+  return `${TMDB_IMAGE_BASE}/${size}${path}`;
+}
+
+async function tmdbFetch<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) throw new Error("TMDB_API_KEY is not set");
+
+  const url = new URL(`${TMDB_BASE}${endpoint}`);
+  url.searchParams.set("api_key", apiKey);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  }
+
+  const res = await fetch(url.toString(), { next: { revalidate: 60 } });
+
+  // Single retry on rate-limit
+  if (res.status === 429) {
+    await new Promise((r) => setTimeout(r, 1000));
+    const retry = await fetch(url.toString());
+    if (!retry.ok) throw new Error(`TMDB error ${retry.status}`);
+    return retry.json() as Promise<T>;
+  }
+
+  if (!res.ok) throw new Error(`TMDB error ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+export async function searchMovies(query: string, page = 1): Promise<TMDBSearchResponse> {
+  return tmdbFetch<TMDBSearchResponse>("/search/movie", {
+    query,
+    page: String(page),
+    include_adult: "false",
+  });
+}
+
+export async function getTrendingMovies(page = 1): Promise<TMDBSearchResponse> {
+  return tmdbFetch<TMDBSearchResponse>("/trending/movie/week", { page: String(page) });
+}
+
+// Normalize a TV show's fields to the shared TMDBMovie shape
+function normalizeTVShow(show: TMDBTVShow): TMDBMovie {
+  return {
+    id: show.id,
+    title: show.name,
+    poster_path: show.poster_path,
+    release_date: show.first_air_date ?? "",
+    vote_average: show.vote_average,
+    overview: show.overview,
+  };
+}
+
+export async function searchTV(query: string, page = 1): Promise<TMDBSearchResponse> {
+  const raw = await tmdbFetch<{ results: TMDBTVShow[]; total_pages: number; total_results: number }>(
+    "/search/tv",
+    { query, page: String(page), include_adult: "false" },
+  );
+  return { results: raw.results.map(normalizeTVShow), total_pages: raw.total_pages, total_results: raw.total_results };
+}
+
+export async function getTrendingTV(page = 1): Promise<TMDBSearchResponse> {
+  const raw = await tmdbFetch<{ results: TMDBTVShow[]; total_pages: number; total_results: number }>(
+    "/trending/tv/week",
+    { page: String(page) },
+  );
+  return { results: raw.results.map(normalizeTVShow), total_pages: raw.total_pages, total_results: raw.total_results };
+}
+
+export interface CastMember {
+  name: string;
+  character: string;
+  profileUrl: string | null;
+}
+
+/** Fetches top 15 cast members for a movie or TV show, normalizing TMDB's differing shapes */
+export async function getMovieCredits(id: number, type: "movie" | "tv"): Promise<CastMember[]> {
+  const endpoint = type === "tv"
+    ? `/tv/${id}/aggregate_credits`
+    : `/movie/${id}/credits`;
+
+  const data = await tmdbFetch<{
+    cast: Array<{
+      name: string;
+      character?: string;
+      roles?: Array<{ character: string }>;
+      profile_path: string | null;
+      order: number;
+    }>;
+  }>(endpoint);
+
+  return data.cast
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 15)
+    .map((member) => ({
+      name: member.name,
+      character: member.character ?? member.roles?.[0]?.character ?? "",
+      profileUrl: posterUrl(member.profile_path, "w185"),
+    }));
+}
+
+// Re-export for convenience
+export { posterUrl };
