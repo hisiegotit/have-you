@@ -37,8 +37,8 @@ export default function SignupPage() {
         <CardDescription>Sign up to start tracking your movies</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-1">
+        <CardContent className="space-y-5 pb-4">
+          <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input
               id="name"
@@ -49,7 +49,7 @@ export default function SignupPage() {
               autoComplete="name"
             />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -60,7 +60,7 @@ export default function SignupPage() {
               autoComplete="email"
             />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"

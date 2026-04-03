@@ -36,8 +36,8 @@ export default function LoginPage() {
         <CardDescription>Enter your email and password to continue</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-1">
+        <CardContent className="space-y-5 pb-4">
+          <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -48,7 +48,7 @@ export default function LoginPage() {
               autoComplete="email"
             />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
