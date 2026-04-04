@@ -80,6 +80,7 @@ model WatchedMovie {
   voteAverage Float?
   userRating  Int?                         // 1-5 personal star rating
   mediaType   String   @default("movie")   // "movie" or "tv"
+  genres      String[] @default([])        // genre names from TMDB
   watchedAt   DateTime @default(now())
   createdAt   DateTime @default(now())
 

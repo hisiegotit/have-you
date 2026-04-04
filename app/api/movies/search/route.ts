@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchMovies, getTrendingMovies, searchTV, getTrendingTV, posterUrl } from "@/lib/tmdb-client";
+import { searchMovies, getTrendingMovies, searchTV, getTrendingTV, posterUrl, genreIdsToNames } from "@/lib/tmdb-client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { searchLimiter } from "@/lib/rate-limit";
@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
       releaseYear: movie.release_date?.slice(0, 4) ?? null,
       rating: Math.round(movie.vote_average * 10) / 10,
       overview: movie.overview,
+      genres: genreIdsToNames(movie.genre_ids ?? []),
       isWatched: watchedIds.has(String(movie.id)),
     }));
 

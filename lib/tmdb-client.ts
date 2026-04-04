@@ -10,6 +10,25 @@ export interface TMDBMovie {
   release_date: string;
   vote_average: number;
   overview: string;
+  genre_ids: number[];
+}
+
+// TMDB genre ID → name (movie + TV combined)
+const GENRE_MAP: Record<number, string> = {
+  28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
+  80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family",
+  14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music",
+  9648: "Mystery", 10749: "Romance", 878: "Science Fiction",
+  10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
+  // TV-specific
+  10759: "Action & Adventure", 10762: "Kids", 10763: "News",
+  10764: "Reality", 10765: "Sci-Fi & Fantasy", 10766: "Soap",
+  10767: "Talk", 10768: "War & Politics",
+};
+
+/** Maps TMDB genre_ids to human-readable names, skipping unknown IDs */
+export function genreIdsToNames(ids: number[]): string[] {
+  return ids.map((id) => GENRE_MAP[id]).filter(Boolean);
 }
 
 // Raw TV show shape from TMDB (fields differ from movie)
@@ -20,6 +39,7 @@ interface TMDBTVShow {
   first_air_date: string;
   vote_average: number;
   overview: string;
+  genre_ids: number[];
 }
 
 export interface TMDBSearchResponse {
@@ -78,6 +98,7 @@ function normalizeTVShow(show: TMDBTVShow): TMDBMovie {
     release_date: show.first_air_date ?? "",
     vote_average: show.vote_average,
     overview: show.overview,
+    genre_ids: show.genre_ids ?? [],
   };
 }
 

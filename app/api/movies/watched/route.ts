@@ -19,11 +19,13 @@ export async function POST(request: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { movieId, movieTitle, posterPath, releaseYear, voteAverage, mediaType } = body;
+  const { movieId, movieTitle, posterPath, releaseYear, voteAverage, mediaType, genres } = body;
 
   if (!movieId || typeof movieId !== "string" || !movieTitle) {
     return NextResponse.json({ error: "movieId and movieTitle are required" }, { status: 400 });
   }
+
+  const genreList = Array.isArray(genres) ? genres.filter((g: unknown) => typeof g === "string") : [];
 
   const movie = await prisma.watchedMovie.upsert({
     where: { userId_movieId: { userId: session.user.id, movieId } },
@@ -35,6 +37,7 @@ export async function POST(request: NextRequest) {
       releaseYear: releaseYear ?? null,
       voteAverage: voteAverage ?? null,
       mediaType: mediaType === "tv" ? "tv" : "movie",
+      genres: genreList,
     },
     update: { watchedAt: new Date() },
   });

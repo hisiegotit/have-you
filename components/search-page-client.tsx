@@ -96,6 +96,7 @@ export function SearchPageClient() {
             releaseYear: movie.releaseYear,
             voteAverage: movie.rating,
             mediaType,
+            genres: movie.genres ?? [],
           }),
         });
         if (!res.ok) throw new Error("Failed to mark watched");

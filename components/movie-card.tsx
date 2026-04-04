@@ -15,6 +15,7 @@ export interface MovieCardData {
   watchedAt?: string;
   userRating?: number;   // 1-5 personal star rating
   mediaType?: "movie" | "tv";
+  genres?: string[];     // genre names from TMDB
 }
 
 interface MovieCardProps {

@@ -33,6 +33,7 @@ export default async function DashboardPage() {
     watchedAt: m.watchedAt.toISOString(),
     userRating: m.userRating ?? undefined,
     mediaType: (m.mediaType === "tv" ? "tv" : "movie") as "movie" | "tv",
+    genres: m.genres ?? [],
   }));
 
   return (
