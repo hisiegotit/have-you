@@ -103,12 +103,14 @@ export function DashboardClient({ initialMovies }: DashboardClientProps) {
       return [{ genre: genreFilter, movies: sortMovies(filtered, sortBy) }];
     }
 
-    // Group by primary genre (first in list); movies with no genre go to "Other"
+    // Group by all genres — a movie appears in every genre section it belongs to
     const map = new Map<string, MovieCardData[]>();
     for (const movie of filtered) {
-      const primaryGenre = movie.genres?.[0] ?? "Other";
-      if (!map.has(primaryGenre)) map.set(primaryGenre, []);
-      map.get(primaryGenre)!.push(movie);
+      const genres = movie.genres?.length ? movie.genres : ["Other"];
+      for (const genre of genres) {
+        if (!map.has(genre)) map.set(genre, []);
+        map.get(genre)!.push(movie);
+      }
     }
 
     return Array.from(map.entries())
