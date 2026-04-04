@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { HaveYouLogo } from "@/components/have-you-logo";
 
 export function Navbar() {
   const router = useRouter();
@@ -23,8 +23,8 @@ export function Navbar() {
     <header className="border-b">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href={session ? "/dashboard" : "/"} className="flex items-center gap-2 font-semibold">
-          <Film className="h-5 w-5" />
-          Have You
+          <HaveYouLogo className="h-5 w-5" />
+          <span>have you<span className="text-muted-foreground">...</span> watched?</span>
         </Link>
         <div className="flex items-center gap-2">
           {session ? (

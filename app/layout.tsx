@@ -11,7 +11,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Have You",
+  title: "have you... watched?",
   description: "Track the movies you've watched",
 };
 
