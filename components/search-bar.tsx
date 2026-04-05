@@ -15,7 +15,7 @@ export function SearchBar({ onSearch, placeholder = "Search movies…" }: Search
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => onSearch(value), 300);
+    timerRef.current = setTimeout(() => onSearch(value), 500);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
