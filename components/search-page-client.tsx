@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { SearchBar } from "@/components/search-bar";
 import { MovieGrid } from "@/components/movie-grid";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { MovieCardData } from "@/components/movie-card";
 
 type MediaType = "movie" | "tv";
-
+// Fix
 export function SearchPageClient() {
   const [movies, setMovies] = useState<MovieCardData[]>([]);
   const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
@@ -17,13 +18,12 @@ export function SearchPageClient() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searching, setSearching] = useState(false);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [mediaType, setMediaType] = useState<MediaType>("movie");
   const [selectedMovie, setSelectedMovie] = useState<MovieCardData | null>(null);
 
-  // Fetch movies or TV shows (trending or search)
   const fetchContent = useCallback(async (q: string, pg: number, type: MediaType, append = false) => {
-    setSearching(true);
+    if (append) setLoadingMore(true); else setSearching(true);
     try {
       const params = q.length >= 2
         ? `?q=${encodeURIComponent(q)}&page=${pg}&type=${type}`
@@ -33,7 +33,6 @@ export function SearchPageClient() {
       if (!res.ok) throw new Error(data.error ?? "Search failed");
       setTotalPages(data.totalPages ?? 1);
 
-      // Seed watchedIds from server-returned isWatched flags
       const results: (MovieCardData & { isWatched?: boolean })[] = data.results;
       setWatchedIds((prev) => {
         const next = append ? new Set(prev) : new Set<string>();
@@ -48,14 +47,12 @@ export function SearchPageClient() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Search failed");
     } finally {
-      setSearching(false);
+      if (append) setLoadingMore(false); else setSearching(false);
     }
   }, []);
 
-  // On mount: load trending movies
   useEffect(() => { fetchContent("", 1, "movie"); }, [fetchContent]);
 
-  // Switch media type: reset query + reload trending
   function handleTypeChange(type: MediaType) {
     setMediaType(type);
     setQuery("");
@@ -63,7 +60,6 @@ export function SearchPageClient() {
     fetchContent("", 1, type);
   }
 
-  // On query change: reset page and search
   const handleSearch = useCallback((q: string) => {
     setQuery(q);
     setPage(1);
@@ -78,12 +74,19 @@ export function SearchPageClient() {
 
   async function handleToggleWatch(movie: MovieCardData) {
     const id = String(movie.id);
-    setLoadingId(id);
+    const wasWatched = watchedIds.has(id);
+
+    // Optimistic update — flip immediately
+    setWatchedIds((prev) => {
+      const next = new Set(prev);
+      if (wasWatched) next.delete(id); else next.add(id);
+      return next;
+    });
+
     try {
-      if (watchedIds.has(id)) {
+      if (wasWatched) {
         const res = await fetch(`/api/movies/watched?movieId=${id}`, { method: "DELETE" });
         if (!res.ok) throw new Error("Failed to unwatch");
-        setWatchedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
         toast.success(`Removed "${movie.title}" from watched`);
       } else {
         const res = await fetch("/api/movies/watched", {
@@ -100,13 +103,16 @@ export function SearchPageClient() {
           }),
         });
         if (!res.ok) throw new Error("Failed to mark watched");
-        setWatchedIds((prev) => new Set([...prev, id]));
         toast.success(`Added "${movie.title}" to watched`);
       }
     } catch (err) {
+      // Rollback on failure
+      setWatchedIds((prev) => {
+        const next = new Set(prev);
+        if (wasWatched) next.add(id); else next.delete(id);
+        return next;
+      });
       toast.error(err instanceof Error ? err.message : "Action failed");
-    } finally {
-      setLoadingId(null);
     }
   }
 
@@ -116,56 +122,61 @@ export function SearchPageClient() {
 
   return (
     <>
-    <MovieDetailModal
-      movie={selectedMovie}
-      onClose={() => setSelectedMovie(null)}
-    />
-    <div className="space-y-6">
-      {/* Media type toggle */}
-      <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
-        <button
-          onClick={() => handleTypeChange("movie")}
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            mediaType === "movie"
-              ? "bg-background shadow-sm text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Movies
-        </button>
-        <button
-          onClick={() => handleTypeChange("tv")}
-          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            mediaType === "tv"
-              ? "bg-background shadow-sm text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          TV Shows
-        </button>
-      </div>
-
-      <SearchBar onSearch={handleSearch} />
-
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{heading}</h2>
-        {searching && <span className="text-sm text-muted-foreground">Searching…</span>}
-      </div>
-
-      <MovieGrid
-        movies={movies}
-        watchedIds={watchedIds}
-        onToggleWatch={handleToggleWatch}
-        onMovieClick={(m) => setSelectedMovie({ ...m, mediaType })}
-        loadingId={loadingId}
-        emptyMessage={searching ? "Searching…" : "No results found."}
+      <MovieDetailModal
+        movie={selectedMovie}
+        onClose={() => setSelectedMovie(null)}
       />
-      {!searching && page < totalPages && (
-        <div className="flex justify-center pt-4">
-          <Button variant="outline" onClick={handleLoadMore}>Load more</Button>
+      <div className="space-y-6">
+        {/* Media type toggle */}
+        <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+          <button
+            onClick={() => handleTypeChange("movie")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              mediaType === "movie"
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Movies
+          </button>
+          <button
+            onClick={() => handleTypeChange("tv")}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              mediaType === "tv"
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            TV Shows
+          </button>
         </div>
-      )}
-    </div>
+
+        <SearchBar onSearch={handleSearch} />
+
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">{heading}</h2>
+          {searching && <span className="text-sm text-muted-foreground">Searching…</span>}
+        </div>
+
+        <MovieGrid
+          movies={movies}
+          watchedIds={watchedIds}
+          onToggleWatch={handleToggleWatch}
+          onMovieClick={(m) => setSelectedMovie({ ...m, mediaType })}
+          emptyMessage={searching ? "Searching…" : "No results found."}
+        />
+
+        {/* Load more */}
+        {!searching && page < totalPages && (
+          <div className="flex justify-center pt-4">
+            {loadingMore ? (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            ) : (
+              <Button variant="outline" onClick={handleLoadMore}>Load more</Button>
+            )}
+          </div>
+        )}
+      </div>
     </>
   );
 }

@@ -1,4 +1,5 @@
-import { createCanvas, loadImage } from "canvas";
+import path from "path";
+import { createCanvas, loadImage, registerFont } from "canvas";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { drawGradientBackground, drawRoundedImage, drawTruncatedText, PASTEL_PALETTE } from "@/lib/canvas-helpers";
@@ -12,15 +13,21 @@ const NAME_H = 36;   // height reserved for movie title below each poster
 const GAP = 24;
 const TOP_PADDING = 100; // space for text header
 
+// Register Geist font once at module load so canvas can render text on any server
+registerFont(path.join(process.cwd(), "public/fonts/Geist-Regular.ttf"), { family: "Geist" });
+
 export async function POST() {
   const session = await getSession();
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const movies = await prisma.watchedMovie.findMany({
-    where: { userId: session.user.id, posterPath: { not: null } },
-    orderBy: { watchedAt: "desc" },
-    take: 6,
-  });
+  const [movies, totalCount] = await Promise.all([
+    prisma.watchedMovie.findMany({
+      where: { userId: session.user.id, posterPath: { not: null } },
+      orderBy: { watchedAt: "desc" },
+      take: 6,
+    }),
+    prisma.watchedMovie.count({ where: { userId: session.user.id } }),
+  ]);
 
   if (movies.length === 0) {
     return Response.json({ error: "No movies to generate poster" }, { status: 400 });
@@ -33,14 +40,16 @@ export async function POST() {
   const [color1, color2] = PASTEL_PALETTE[Math.floor(Math.random() * PASTEL_PALETTE.length)];
   drawGradientBackground(ctx, WIDTH, HEIGHT, color1, color2);
 
+  const displayName = session.user.name?.trim() || "Your";
+
   // Dark text on light pastel background
   ctx.fillStyle = "rgba(30, 30, 30, 0.9)";
-  ctx.font = "bold 48px sans-serif";
-  ctx.fillText(`${session.user.name}'s Movies`, 60, 66);
+  ctx.font = "bold 48px Geist";
+  ctx.fillText(`${displayName}'s Movies`, 60, 66);
 
   ctx.fillStyle = "rgba(30, 30, 30, 0.6)";
-  ctx.font = "24px sans-serif";
-  ctx.fillText(`${movies.length} watched`, 60, 96);
+  ctx.font = "24px Geist";
+  ctx.fillText(`${totalCount} watched`, 60, 96);
 
   // Load poster images in parallel, skip failures
   const rows = Math.ceil(movies.length / COLS);
@@ -69,7 +78,7 @@ export async function POST() {
 
     // Draw movie title below poster
     ctx.fillStyle = "rgba(30, 30, 30, 0.85)";
-    ctx.font = "bold 13px sans-serif";
+    ctx.font = "bold 13px Geist";
     ctx.textAlign = "center";
     drawTruncatedText(ctx, movies[i].movieTitle, POSTER_W, x + POSTER_W / 2, y + POSTER_H + 20);
     ctx.textAlign = "left";

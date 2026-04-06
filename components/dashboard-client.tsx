@@ -96,27 +96,7 @@ export function DashboardClient({ initialMovies }: DashboardClientProps) {
     return result;
   }, [movies, searchQuery, mediaFilter, genreFilter]);
 
-  // When a specific genre is selected → single sorted list
-  // When no genre filter → group by primary genre (first genre)
-  const sections = useMemo(() => {
-    if (genreFilter !== "all") {
-      return [{ genre: genreFilter, movies: sortMovies(filtered, sortBy) }];
-    }
-
-    // Group by all genres — a movie appears in every genre section it belongs to
-    const map = new Map<string, MovieCardData[]>();
-    for (const movie of filtered) {
-      const genres = movie.genres?.length ? movie.genres : ["Other"];
-      for (const genre of genres) {
-        if (!map.has(genre)) map.set(genre, []);
-        map.get(genre)!.push(movie);
-      }
-    }
-
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([genre, list]) => ({ genre, movies: sortMovies(list, sortBy) }));
-  }, [filtered, genreFilter, sortBy]);
+  const sortedMovies = useMemo(() => sortMovies(filtered, sortBy), [filtered, sortBy]);
 
   const watchedIds = new Set(movies.map((m) => String(m.id)));
 
@@ -201,23 +181,14 @@ export function DashboardClient({ initialMovies }: DashboardClientProps) {
           </div>
         </div>
 
-        {/* Genre sections */}
-        {sections.length === 0 ? (
+        {sortedMovies.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">No movies match your filters</p>
         ) : (
-          sections.map(({ genre, movies: sectionMovies }) => (
-            <div key={genre} className="space-y-3">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold">{genre}</h2>
-                <span className="text-xs text-muted-foreground">({sectionMovies.length})</span>
-              </div>
-              <MovieGrid
-                movies={sectionMovies}
-                emptyMessage="No movies match your filters"
-                {...gridProps}
-              />
-            </div>
-          ))
+          <MovieGrid
+            movies={sortedMovies}
+            emptyMessage="No movies match your filters"
+            {...gridProps}
+          />
         )}
       </div>
     </>

@@ -27,5 +27,5 @@ export function rateLimit(limit: number, windowMs: number) {
   };
 }
 
-/** 30 requests per minute — used on search API */
-export const searchLimiter = rateLimit(30, 60_000);
+/** 100 requests per minute — used on search API */
+export const searchLimiter = rateLimit(100, 60_000);

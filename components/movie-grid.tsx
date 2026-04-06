@@ -44,7 +44,7 @@ export function MovieGrid({
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      {movies.map((movie) => (
+      {movies.map((movie, i) => (
         <MovieCard
           key={movie.id}
           movie={movie}
@@ -54,6 +54,7 @@ export function MovieGrid({
           onRatingChange={onRatingChange}
           onClick={onMovieClick}
           loading={loadingId === String(movie.id)}
+          priority={i === 0}
         />
       ))}
     </div>

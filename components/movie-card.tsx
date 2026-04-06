@@ -26,9 +26,10 @@ interface MovieCardProps {
   onRatingChange?: (movie: MovieCardData, rating: number | null) => void;
   onClick?: (movie: MovieCardData) => void;
   loading?: boolean;
+  priority?: boolean;
 }
 
-export function MovieCard({ movie, isWatched, showWatchButton = true, onToggleWatch, onRatingChange, onClick, loading }: MovieCardProps) {
+export function MovieCard({ movie, isWatched, showWatchButton = true, onToggleWatch, onRatingChange, onClick, loading, priority = false }: MovieCardProps) {
   return (
     <div
       className={`group relative flex flex-col rounded-lg overflow-hidden border bg-card shadow-sm hover:shadow-md transition-shadow ${onClick ? "cursor-pointer" : ""}`}
@@ -42,7 +43,8 @@ export function MovieCard({ movie, isWatched, showWatchButton = true, onToggleWa
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           className="object-cover"
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
         />
         {isWatched && (
           <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-0.5">
