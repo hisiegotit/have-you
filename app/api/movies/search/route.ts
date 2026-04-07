@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchMovies, getTrendingMovies, searchTV, getTrendingTV, posterUrl, genreIdsToNames } from "@/lib/tmdb-client";
+import { searchMovies, getTrendingMovies, searchTV, getTrendingTV, searchByActor, posterUrl, genreIdsToNames } from "@/lib/tmdb-client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { searchLimiter } from "@/lib/rate-limit";
@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
   const page = parseInt(searchParams.get("page") ?? "1", 10);
   const trending = searchParams.get("trending") === "true";
   const type = searchParams.get("type") === "tv" ? "tv" : "movie";
+  const searchType = searchParams.get("searchType") === "actor" ? "actor" : "title";
 
   if (!trending && query.length < 2) {
     return NextResponse.json({ error: "Query must be at least 2 characters" }, { status: 400 });
@@ -35,7 +36,9 @@ export async function GET(request: NextRequest) {
   try {
     const data = trending
       ? type === "tv" ? await getTrendingTV(page) : await getTrendingMovies(page)
-      : type === "tv" ? await searchTV(query, page) : await searchMovies(query, page);
+      : searchType === "actor"
+        ? await searchByActor(query, type, page)
+        : type === "tv" ? await searchTV(query, page) : await searchMovies(query, page);
 
     // Attach isWatched flag if user is authenticated
     const session = await getSession();

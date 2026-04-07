@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Film, Search } from "lucide-react";
+import { Bookmark, Film, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { MovieGrid } from "@/components/movie-grid";
 import { MovieDetailModal } from "@/components/movie-detail-modal";
@@ -10,9 +10,11 @@ import type { MovieCardData } from "@/components/movie-card";
 
 type SortBy = "date-desc" | "date-asc" | "rating" | "title-az";
 type FilterMediaType = "all" | "movie" | "tv";
+type ActiveTab = "watched" | "watch-later";
 
 interface DashboardClientProps {
   initialMovies: MovieCardData[];
+  initialWatchLater: MovieCardData[];
 }
 
 function sortMovies(list: MovieCardData[], sortBy: SortBy) {
@@ -27,14 +29,35 @@ function sortMovies(list: MovieCardData[], sortBy: SortBy) {
   });
 }
 
-export function DashboardClient({ initialMovies }: DashboardClientProps) {
+export function DashboardClient({ initialMovies, initialWatchLater }: DashboardClientProps) {
   const [movies, setMovies] = useState(initialMovies);
+  const [watchLater, setWatchLater] = useState(initialWatchLater);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("date-desc");
   const [mediaFilter, setMediaFilter] = useState<FilterMediaType>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [selectedMovie, setSelectedMovie] = useState<MovieCardData | null>(null);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("watched");
+  const [displayCount, setDisplayCount] = useState(24);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Reset display count when filters/sort change
+  useEffect(() => { setDisplayCount(24); }, [searchQuery, sortBy, mediaFilter, genreFilter, activeTab]);
+
+  // Infinite scroll — reveal 24 more when sentinel enters viewport
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setDisplayCount((c) => c + 24);
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
 
   async function handleUnwatch(movie: MovieCardData) {
     const id = String(movie.id);
@@ -71,37 +94,56 @@ export function DashboardClient({ initialMovies }: DashboardClientProps) {
     }
   }
 
-  // All unique genres across the collection, sorted alphabetically
+  async function handleSaveNote(movieId: string, note: string) {
+    setMovies((prev) =>
+      prev.map((m) => (String(m.id) === movieId ? { ...m, note } : m))
+    );
+    const res = await fetch("/api/movies/watched", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ movieId, note }),
+    });
+    if (!res.ok) throw new Error("Failed to save note");
+  }
+
+  async function handleRemoveWatchLater(movie: MovieCardData) {
+    const id = String(movie.id);
+    // Optimistic
+    setWatchLater((prev) => prev.filter((m) => String(m.id) !== id));
+    try {
+      const res = await fetch(`/api/movies/watch-later?movieId=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove");
+      toast.success(`Removed "${movie.title}" from Watch Later`);
+    } catch {
+      setWatchLater((prev) => [...prev, movie]);
+      toast.error("Failed to remove from Watch Later");
+    }
+  }
+
   const allGenres = useMemo(() => {
     const set = new Set<string>();
     movies.forEach((m) => m.genres?.forEach((g) => set.add(g)));
     return Array.from(set).sort();
   }, [movies]);
 
-  // Base list after search + media type + genre filters
   const filtered = useMemo(() => {
     let result = movies;
-
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter((m) => m.title.toLowerCase().includes(q));
     }
-    if (mediaFilter !== "all") {
-      result = result.filter((m) => (m.mediaType ?? "movie") === mediaFilter);
-    }
-    if (genreFilter !== "all") {
-      result = result.filter((m) => m.genres?.includes(genreFilter));
-    }
-
+    if (mediaFilter !== "all") result = result.filter((m) => (m.mediaType ?? "movie") === mediaFilter);
+    if (genreFilter !== "all") result = result.filter((m) => m.genres?.includes(genreFilter));
     return result;
   }, [movies, searchQuery, mediaFilter, genreFilter]);
 
   const sortedMovies = useMemo(() => sortMovies(filtered, sortBy), [filtered, sortBy]);
+  const visibleMovies = sortedMovies.slice(0, displayCount);
+  const hasMore = displayCount < sortedMovies.length;
 
   const watchedIds = new Set(movies.map((m) => String(m.id)));
 
-  // Empty state
-  if (movies.length === 0) {
+  if (movies.length === 0 && watchLater.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
         <Film className="h-12 w-12 text-muted-foreground/40" />
@@ -129,66 +171,105 @@ export function DashboardClient({ initialMovies }: DashboardClientProps) {
 
   return (
     <>
-      <MovieDetailModal movie={selectedMovie} onClose={() => setSelectedMovie(null)} />
+      <MovieDetailModal
+        movie={selectedMovie}
+        onClose={() => setSelectedMovie(null)}
+        onSaveNote={selectedMovie && watchedIds.has(String(selectedMovie.id)) ? handleSaveNote : undefined}
+      />
       <div className="space-y-6">
-        {/* Controls */}
-        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-          {/* Search */}
-          <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Filter by title…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-
-          {/* Sort */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortBy)}
-            className="text-sm border rounded-md px-3 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            <option value="date-desc">Date watched (newest)</option>
-            <option value="date-asc">Date watched (oldest)</option>
-            <option value="rating">Rating (highest)</option>
-            <option value="title-az">Title (A–Z)</option>
-          </select>
-
-          {/* Genre filter */}
-          {allGenres.length > 0 && (
-            <select
-              value={genreFilter}
-              onChange={(e) => setGenreFilter(e.target.value)}
-              className="text-sm border rounded-md px-3 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="all">All genres</option>
-              {allGenres.map((g) => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
-          )}
-
-          {/* Media type filter */}
-          <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
-            {(["all", "movie", "tv"] as FilterMediaType[]).map((t) => (
-              <button key={t} onClick={() => setMediaFilter(t)} className={mediaToggleClass(mediaFilter === t)}>
-                {t === "all" ? "All" : t === "movie" ? "Movies" : "TV Shows"}
-              </button>
-            ))}
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+          <button onClick={() => setActiveTab("watched")} className={mediaToggleClass(activeTab === "watched")}>
+            Watched <span className="ml-1 text-xs text-muted-foreground">({movies.length})</span>
+          </button>
+          <button onClick={() => setActiveTab("watch-later")} className={mediaToggleClass(activeTab === "watch-later")}>
+            <Bookmark className="inline h-3.5 w-3.5 mr-1" />
+            Watch Later <span className="ml-1 text-xs text-muted-foreground">({watchLater.length})</span>
+          </button>
         </div>
 
-        {sortedMovies.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">No movies match your filters</p>
+        {activeTab === "watch-later" ? (
+          watchLater.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
+              <Bookmark className="h-10 w-10 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No movies saved for later</p>
+              <Link href="/search" className="text-sm underline text-muted-foreground hover:text-foreground">
+                Browse movies
+              </Link>
+            </div>
+          ) : (
+            <MovieGrid
+              movies={watchLater}
+              watchedIds={watchedIds}
+              showWatchButton={false}
+              onToggleWatch={handleRemoveWatchLater}
+              onMovieClick={setSelectedMovie}
+              emptyMessage="Nothing saved yet"
+            />
+          )
         ) : (
-          <MovieGrid
-            movies={sortedMovies}
-            emptyMessage="No movies match your filters"
-            {...gridProps}
-          />
+          <>
+            {/* Controls */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-48">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Filter by title…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortBy)}
+                className="text-sm border rounded-md px-3 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="date-desc">Date watched (newest)</option>
+                <option value="date-asc">Date watched (oldest)</option>
+                <option value="rating">Rating (highest)</option>
+                <option value="title-az">Title (A–Z)</option>
+              </select>
+
+              {allGenres.length > 0 && (
+                <select
+                  value={genreFilter}
+                  onChange={(e) => setGenreFilter(e.target.value)}
+                  className="text-sm border rounded-md px-3 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="all">All genres</option>
+                  {allGenres.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              )}
+
+              <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit">
+                {(["all", "movie", "tv"] as FilterMediaType[]).map((t) => (
+                  <button key={t} onClick={() => setMediaFilter(t)} className={mediaToggleClass(mediaFilter === t)}>
+                    {t === "all" ? "All" : t === "movie" ? "Movies" : "TV Shows"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {sortedMovies.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No movies match your filters</p>
+            ) : (
+              <>
+                <MovieGrid
+                  movies={visibleMovies}
+                  emptyMessage="No movies match your filters"
+                  {...gridProps}
+                />
+                <div ref={sentinelRef} className="flex justify-center py-6">
+                  {hasMore && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+                </div>
+              </>
+            )}
+          </>
         )}
       </div>
     </>

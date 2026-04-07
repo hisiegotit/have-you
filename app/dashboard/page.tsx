@@ -18,10 +18,16 @@ export default async function DashboardPage() {
   const session = await getSession();
   if (!session?.user) redirect("/login");
 
-  const watched = await prisma.watchedMovie.findMany({
-    where: { userId: session.user.id },
-    orderBy: { watchedAt: "desc" },
-  });
+  const [watched, watchLaterRows] = await Promise.all([
+    prisma.watchedMovie.findMany({
+      where: { userId: session.user.id },
+      orderBy: { watchedAt: "desc" },
+    }),
+    prisma.watchLaterMovie.findMany({
+      where: { userId: session.user.id },
+      orderBy: { addedAt: "desc" },
+    }),
+  ]);
 
   const movies = watched.map((m) => ({
     id: m.movieId,
@@ -32,6 +38,18 @@ export default async function DashboardPage() {
     rating: m.voteAverage ?? undefined,
     watchedAt: m.watchedAt.toISOString(),
     userRating: m.userRating ?? undefined,
+    note: m.note ?? undefined,
+    mediaType: (m.mediaType === "tv" ? "tv" : "movie") as "movie" | "tv",
+    genres: m.genres ?? [],
+  }));
+
+  const watchLaterMovies = watchLaterRows.map((m) => ({
+    id: m.movieId,
+    title: m.movieTitle,
+    posterUrl: posterUrl(m.posterPath ?? null),
+    posterPath: m.posterPath ?? null,
+    releaseYear: m.releaseYear ?? null,
+    rating: m.voteAverage ?? undefined,
     mediaType: (m.mediaType === "tv" ? "tv" : "movie") as "movie" | "tv",
     genres: m.genres ?? [],
   }));
@@ -43,7 +61,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold">My Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            {movies.length} movie{movies.length !== 1 ? "s" : ""} watched
+            {movies.length} watched · {watchLaterMovies.length} saved for later
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -58,7 +76,7 @@ export default async function DashboardPage() {
 
       {/* Watched movies grid */}
       <ErrorBoundary>
-        <DashboardClient initialMovies={movies} />
+        <DashboardClient initialMovies={movies} initialWatchLater={watchLaterMovies} />
       </ErrorBoundary>
     </div>
   );

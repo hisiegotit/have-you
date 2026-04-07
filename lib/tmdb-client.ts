@@ -118,6 +118,46 @@ export async function getTrendingTV(page = 1): Promise<TMDBSearchResponse> {
   return { results: raw.results.map(normalizeTVShow), total_pages: raw.total_pages, total_results: raw.total_results };
 }
 
+/** Search movies/TV by actor name — finds the best-matching person then returns their credits */
+export async function searchByActor(name: string, type: "movie" | "tv" = "movie", page = 1): Promise<TMDBSearchResponse> {
+  const people = await tmdbFetch<{ results: Array<{ id: number }> }>(
+    "/search/person",
+    { query: name, include_adult: "false" },
+  );
+
+  if (people.results.length === 0) {
+    return { results: [], total_pages: 0, total_results: 0 };
+  }
+
+  const personId = people.results[0].id;
+
+  if (type === "tv") {
+    const raw = await tmdbFetch<{ cast: TMDBTVShow[] }>(`/person/${personId}/tv_credits`);
+    const sorted = raw.cast
+      .filter((s) => s.poster_path)
+      .sort((a, b) => b.vote_average - a.vote_average);
+    const pageSize = 20;
+    const slice = sorted.slice((page - 1) * pageSize, page * pageSize);
+    return {
+      results: slice.map(normalizeTVShow),
+      total_pages: Math.ceil(sorted.length / pageSize),
+      total_results: sorted.length,
+    };
+  }
+
+  const raw = await tmdbFetch<{ cast: TMDBMovie[] }>(`/person/${personId}/movie_credits`);
+  const sorted = raw.cast
+    .filter((m) => m.poster_path)
+    .sort((a, b) => b.vote_average - a.vote_average);
+  const pageSize = 20;
+  const slice = sorted.slice((page - 1) * pageSize, page * pageSize);
+  return {
+    results: slice,
+    total_pages: Math.ceil(sorted.length / pageSize),
+    total_results: sorted.length,
+  };
+}
+
 export interface CastMember {
   name: string;
   character: string;

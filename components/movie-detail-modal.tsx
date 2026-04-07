@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Star } from "lucide-react";
 import {
@@ -16,6 +16,7 @@ import type { CastMember } from "@/lib/tmdb-client";
 interface MovieDetailModalProps {
   movie: MovieCardData | null;
   onClose: () => void;
+  onSaveNote?: (movieId: string, note: string) => Promise<void>;
 }
 
 /** Circular placeholder for cast members without a photo */
@@ -40,13 +41,17 @@ function CastSkeleton() {
   );
 }
 
-export function MovieDetailModal({ movie, onClose }: MovieDetailModalProps) {
+export function MovieDetailModal({ movie, onClose, onSaveNote }: MovieDetailModalProps) {
   const [cast, setCast] = useState<CastMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
+  const noteSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!movie) return;
     setCast([]);
+    setNote(movie.note ?? "");
     setLoading(true);
 
     const type = movie.mediaType ?? "movie";
@@ -56,6 +61,20 @@ export function MovieDetailModal({ movie, onClose }: MovieDetailModalProps) {
       .catch(() => toast.error("Could not load cast"))
       .finally(() => setLoading(false));
   }, [movie]);
+
+  function handleNoteChange(value: string) {
+    setNote(value);
+    if (!onSaveNote || !movie) return;
+    if (noteSaveTimer.current) clearTimeout(noteSaveTimer.current);
+    noteSaveTimer.current = setTimeout(async () => {
+      setNoteSaving(true);
+      try {
+        await onSaveNote(String(movie.id), value);
+      } finally {
+        setNoteSaving(false);
+      }
+    }, 800);
+  }
 
   return (
     <Dialog open={movie !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -116,6 +135,23 @@ export function MovieDetailModal({ movie, onClose }: MovieDetailModalProps) {
                 )}
               </div>
             </div>
+
+            {/* Personal note — only shown when onSaveNote is provided (i.e. watched movie from dashboard) */}
+            {onSaveNote && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h3 className="text-sm font-semibold">My note</h3>
+                  {noteSaving && <span className="text-xs text-muted-foreground">Saving…</span>}
+                </div>
+                <textarea
+                  value={note}
+                  onChange={(e) => handleNoteChange(e.target.value)}
+                  placeholder="Add a personal note about this movie…"
+                  rows={3}
+                  className="w-full text-sm border rounded-md px-3 py-2 bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+                />
+              </div>
+            )}
 
             {/* Cast */}
             <div className="mt-4">

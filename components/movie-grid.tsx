@@ -4,8 +4,10 @@ import { MovieCardSkeleton } from "@/components/movie-card-skeleton";
 interface MovieGridProps {
   movies: MovieCardData[];
   watchedIds?: Set<string>;
+  watchLaterIds?: Set<string>;
   showWatchButton?: boolean;
   onToggleWatch?: (movie: MovieCardData) => void;
+  onToggleWatchLater?: (movie: MovieCardData) => void;
   onRatingChange?: (movie: MovieCardData, rating: number | null) => void;
   onMovieClick?: (movie: MovieCardData) => void;
   loadingId?: string | null;
@@ -16,8 +18,10 @@ interface MovieGridProps {
 export function MovieGrid({
   movies,
   watchedIds = new Set(),
+  watchLaterIds = new Set(),
   showWatchButton = true,
   onToggleWatch,
+  onToggleWatchLater,
   onRatingChange,
   onMovieClick,
   loadingId,
@@ -49,8 +53,10 @@ export function MovieGrid({
           key={movie.id}
           movie={movie}
           isWatched={watchedIds.has(String(movie.id))}
+          isWatchLater={watchLaterIds.has(String(movie.id))}
           showWatchButton={showWatchButton}
           onToggleWatch={onToggleWatch}
+          onToggleWatchLater={onToggleWatchLater}
           onRatingChange={onRatingChange}
           onClick={onMovieClick}
           loading={loadingId === String(movie.id)}

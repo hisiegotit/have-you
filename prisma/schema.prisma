@@ -18,10 +18,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  sessions      Session[]
-  accounts      Account[]
-  watchedMovies WatchedMovie[]
-  shareToken    ShareToken?
+  sessions         Session[]
+  accounts         Account[]
+  watchedMovies    WatchedMovie[]
+  watchLaterMovies WatchLaterMovie[]
+  shareToken       ShareToken?
 }
 
 model Session {
@@ -79,12 +80,31 @@ model WatchedMovie {
   releaseYear String?
   voteAverage Float?
   userRating  Int?                         // 1-5 personal star rating
+  note        String?                      // personal note
   mediaType   String   @default("movie")   // "movie" or "tv"
   genres      String[] @default([])        // genre names from TMDB
   watchedAt   DateTime @default(now())
   createdAt   DateTime @default(now())
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@index([userId])
+}
+
+model WatchLaterMovie {
+  id          String   @id @default(cuid())
+  userId      String
+  movieId     String
+  movieTitle  String
+  posterPath  String?
+  releaseYear String?
+  voteAverage Float?
+  mediaType   String   @default("movie")
+  genres      String[] @default([])
+  addedAt     DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, movieId])
   @@index([userId])
