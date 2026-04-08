@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { encryptNote, decryptNote } from "@/lib/note-encryption";
 
 export async function GET() {
   const session = await getSession();
@@ -11,7 +12,12 @@ export async function GET() {
     orderBy: { watchedAt: "desc" },
   });
 
-  return NextResponse.json({ movies });
+  const decrypted = movies.map((m) => ({
+    ...m,
+    note: m.note ? (decryptNote(m.note) ?? m.note) : null,
+  }));
+
+  return NextResponse.json({ movies: decrypted });
 }
 
 export async function POST(request: NextRequest) {
@@ -71,7 +77,7 @@ export async function PATCH(request: NextRequest) {
     if (typeof note !== "string" && note !== null) {
       return NextResponse.json({ error: "note must be a string" }, { status: 400 });
     }
-    updateData.note = note ?? null;
+    updateData.note = note ? encryptNote(note) : null;
   }
 
   const movie = await prisma.watchedMovie.update({
