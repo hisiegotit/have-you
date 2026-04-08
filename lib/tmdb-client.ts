@@ -77,6 +77,127 @@ async function tmdbFetch<T>(endpoint: string, params?: Record<string, string>): 
   return res.json() as Promise<T>;
 }
 
+// TMDB multi-search result (movies + TV shows in one call)
+interface TMDBMultiResult {
+  id: number;
+  media_type: "movie" | "tv" | "person";
+  title?: string;          // movies
+  name?: string;           // TV shows
+  poster_path: string | null;
+  release_date?: string;   // movies
+  first_air_date?: string; // TV shows
+  vote_average: number;
+  overview: string;
+  genre_ids: number[];
+}
+
+interface TMDBMultiResponse {
+  results: TMDBMultiResult[];
+  total_pages: number;
+  total_results: number;
+}
+
+export interface TMDBSearchResponseWithType extends TMDBSearchResponse {
+  results: (TMDBMovie & { mediaType: "movie" | "tv" })[];
+}
+
+function normalizeMultiResult(r: TMDBMultiResult): (TMDBMovie & { mediaType: "movie" | "tv" }) | null {
+  if (r.media_type === "person") return null;
+  return {
+    id: r.id,
+    title: r.title ?? r.name ?? "",
+    poster_path: r.poster_path,
+    release_date: r.release_date ?? r.first_air_date ?? "",
+    vote_average: r.vote_average,
+    overview: r.overview,
+    genre_ids: r.genre_ids ?? [],
+    mediaType: r.media_type,
+  };
+}
+
+export async function searchMulti(query: string, page = 1): Promise<TMDBSearchResponseWithType> {
+  const raw = await tmdbFetch<TMDBMultiResponse>("/search/multi", {
+    query,
+    page: String(page),
+    include_adult: "false",
+  });
+  const results = raw.results.map(normalizeMultiResult).filter((r): r is NonNullable<typeof r> => r !== null);
+  return { results, total_pages: raw.total_pages, total_results: raw.total_results };
+}
+
+export async function getTrendingMulti(page = 1): Promise<TMDBSearchResponseWithType> {
+  const [movies, tv] = await Promise.all([
+    getTrendingMovies(page),
+    getTrendingTV(page),
+  ]);
+  // Interleave both lists and tag each with its mediaType
+  const tagged = [
+    ...movies.results.map((m) => ({ ...m, mediaType: "movie" as const })),
+    ...tv.results.map((m) => ({ ...m, mediaType: "tv" as const })),
+  ];
+  return {
+    results: tagged,
+    total_pages: Math.max(movies.total_pages, tv.total_pages),
+    total_results: movies.total_results + tv.total_results,
+  };
+}
+
+export interface TMDBPerson {
+  id: number;
+  name: string;
+  profile_path: string | null;
+  known_for_department: string;
+  popularity: number;
+  known_for: Array<{ id: number; title?: string; name?: string; media_type: string }>;
+}
+
+export async function searchPeople(query: string, page = 1): Promise<{
+  results: TMDBPerson[];
+  total_pages: number;
+  total_results: number;
+}> {
+  return tmdbFetch("/search/person", { query, page: String(page), include_adult: "false" });
+}
+
+export async function getPersonCombinedCredits(personId: number): Promise<TMDBSearchResponseWithType> {
+  const raw = await tmdbFetch<{
+    cast: Array<{
+      id: number;
+      title?: string;
+      name?: string;
+      poster_path: string | null;
+      release_date?: string;
+      first_air_date?: string;
+      vote_average: number;
+      overview: string;
+      genre_ids?: number[];
+      media_type: "movie" | "tv";
+    }>;
+  }>(`/person/${personId}/combined_credits`);
+
+  const seen = new Set<number>();
+  const results = raw.cast
+    .filter((c) => {
+      if (!c.poster_path || (c.media_type !== "movie" && c.media_type !== "tv")) return false;
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    })
+    .sort((a, b) => b.vote_average - a.vote_average)
+    .map((c) => ({
+      id: c.id,
+      title: c.title ?? c.name ?? "",
+      poster_path: c.poster_path,
+      release_date: c.release_date ?? c.first_air_date ?? "",
+      vote_average: c.vote_average,
+      overview: c.overview,
+      genre_ids: c.genre_ids ?? [],
+      mediaType: c.media_type,
+    }));
+
+  return { results, total_pages: 1, total_results: results.length };
+}
+
 export async function searchMovies(query: string, page = 1): Promise<TMDBSearchResponse> {
   return tmdbFetch<TMDBSearchResponse>("/search/movie", {
     query,
