@@ -97,6 +97,7 @@ export function MovieDetailModal({ movie, onClose, onSaveNote }: MovieDetailModa
                   fill
                   sizes="112px"
                   className="object-cover"
+                  unoptimized
                 />
               </div>
 
@@ -174,6 +175,7 @@ export function MovieDetailModal({ movie, onClose, onSaveNote }: MovieDetailModa
                             fill
                             sizes="56px"
                             className="object-cover"
+                            unoptimized
                           />
                         </div>
                       ) : (

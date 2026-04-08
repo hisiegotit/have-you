@@ -47,6 +47,7 @@ export function MovieCard({ movie, isWatched, isWatchLater = false, showWatchBut
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           className="object-cover"
           priority={priority}
+          unoptimized
         />
         {isWatched && (
           <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-0.5">
