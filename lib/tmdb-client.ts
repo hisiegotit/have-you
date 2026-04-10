@@ -11,6 +11,7 @@ export interface TMDBMovie {
   vote_average: number;
   overview: string;
   genre_ids: number[];
+  adult?: boolean;
 }
 
 // TMDB genre ID → name (movie + TV combined)
@@ -89,6 +90,7 @@ interface TMDBMultiResult {
   vote_average: number;
   overview: string;
   genre_ids: number[];
+  adult?: boolean;
 }
 
 interface TMDBMultiResponse {
@@ -121,7 +123,10 @@ export async function searchMulti(query: string, page = 1): Promise<TMDBSearchRe
     page: String(page),
     include_adult: "false",
   });
-  const results = raw.results.map(normalizeMultiResult).filter((r): r is NonNullable<typeof r> => r !== null);
+  const results = raw.results
+    .filter((r) => !isAdult(r))
+    .map(normalizeMultiResult)
+    .filter((r): r is NonNullable<typeof r> => r !== null);
   return { results, total_pages: raw.total_pages, total_results: raw.total_results };
 }
 
@@ -179,6 +184,7 @@ export async function getPersonCombinedCredits(personId: number): Promise<TMDBSe
   const results = raw.cast
     .filter((c) => {
       if (!c.poster_path || (c.media_type !== "movie" && c.media_type !== "tv")) return false;
+      if ((c as { adult?: boolean }).adult === true) return false;
       if (seen.has(c.id)) return false;
       seen.add(c.id);
       return true;
@@ -199,15 +205,22 @@ export async function getPersonCombinedCredits(personId: number): Promise<TMDBSe
 }
 
 export async function searchMovies(query: string, page = 1): Promise<TMDBSearchResponse> {
-  return tmdbFetch<TMDBSearchResponse>("/search/movie", {
+  const raw = await tmdbFetch<TMDBSearchResponse>("/search/movie", {
     query,
     page: String(page),
     include_adult: "false",
   });
+  return { ...raw, results: raw.results.filter((m) => !isAdult(m)) };
 }
 
 export async function getTrendingMovies(page = 1): Promise<TMDBSearchResponse> {
-  return tmdbFetch<TMDBSearchResponse>("/trending/movie/week", { page: String(page) });
+  const raw = await tmdbFetch<TMDBSearchResponse>("/trending/movie/week", { page: String(page), include_adult: "false" });
+  return { ...raw, results: raw.results.filter((m) => !isAdult(m)) };
+}
+
+/** Returns true if a result should be excluded (adult content) */
+function isAdult(item: { adult?: boolean }): boolean {
+  return item.adult === true;
 }
 
 // Normalize a TV show's fields to the shared TMDBMovie shape
@@ -228,15 +241,15 @@ export async function searchTV(query: string, page = 1): Promise<TMDBSearchRespo
     "/search/tv",
     { query, page: String(page), include_adult: "false" },
   );
-  return { results: raw.results.map(normalizeTVShow), total_pages: raw.total_pages, total_results: raw.total_results };
+  return { results: raw.results.filter((s) => !isAdult(s)).map(normalizeTVShow), total_pages: raw.total_pages, total_results: raw.total_results };
 }
 
 export async function getTrendingTV(page = 1): Promise<TMDBSearchResponse> {
   const raw = await tmdbFetch<{ results: TMDBTVShow[]; total_pages: number; total_results: number }>(
     "/trending/tv/week",
-    { page: String(page) },
+    { page: String(page), include_adult: "false" },
   );
-  return { results: raw.results.map(normalizeTVShow), total_pages: raw.total_pages, total_results: raw.total_results };
+  return { results: raw.results.filter((s) => !isAdult(s)).map(normalizeTVShow), total_pages: raw.total_pages, total_results: raw.total_results };
 }
 
 /** Search movies/TV by actor name — finds the best-matching person then returns their credits */

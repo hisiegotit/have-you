@@ -120,6 +120,39 @@ export function DashboardClient({ initialMovies, initialWatchLater }: DashboardC
     }
   }
 
+  async function handleMarkAsWatched(movie: MovieCardData) {
+    const id = String(movie.id);
+    const now = new Date().toISOString();
+    // Optimistic: add to watched, remove from watch-later
+    setMovies((prev) => [{ ...movie, watchedAt: now }, ...prev]);
+    setWatchLater((prev) => prev.filter((m) => String(m.id) !== id));
+    try {
+      const [watchRes, removeRes] = await Promise.all([
+        fetch("/api/movies/watched", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            movieId: id,
+            movieTitle: movie.title,
+            posterPath: movie.posterPath,
+            releaseYear: movie.releaseYear,
+            voteAverage: movie.rating,
+            mediaType: movie.mediaType,
+            genres: movie.genres,
+          }),
+        }),
+        fetch(`/api/movies/watch-later?movieId=${id}`, { method: "DELETE" }),
+      ]);
+      if (!watchRes.ok || !removeRes.ok) throw new Error("Failed");
+      toast.success(`Marked "${movie.title}" as watched`);
+    } catch {
+      // Roll back
+      setMovies((prev) => prev.filter((m) => String(m.id) !== id));
+      setWatchLater((prev) => [movie, ...prev]);
+      toast.error("Failed to mark as watched");
+    }
+  }
+
   const allGenres = useMemo(() => {
     const set = new Set<string>();
     movies.forEach((m) => m.genres?.forEach((g) => set.add(g)));
@@ -201,8 +234,7 @@ export function DashboardClient({ initialMovies, initialWatchLater }: DashboardC
             <MovieGrid
               movies={watchLater}
               watchedIds={watchedIds}
-              showWatchButton={false}
-              onToggleWatch={handleRemoveWatchLater}
+              onToggleWatch={handleMarkAsWatched}
               onMovieClick={setSelectedMovie}
               emptyMessage="Nothing saved yet"
             />

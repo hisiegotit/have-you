@@ -9,7 +9,6 @@ import { decryptNote } from "@/lib/note-encryption";
 import { DashboardClient } from "@/components/dashboard-client";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ShareButton } from "@/components/share-button";
-import { DownloadPosterButton } from "@/components/download-poster-button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
@@ -67,8 +66,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ShareButton />
-          <DownloadPosterButton movieCount={movies.length} />
-          <Link href="/search" className={cn(buttonVariants({ size: "sm" }))}>
+<Link href="/search" className={cn(buttonVariants({ size: "sm" }))}>
             <Search className="h-4 w-4 mr-2" />
             Search Movies
           </Link>
