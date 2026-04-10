@@ -41,6 +41,7 @@ interface TMDBTVShow {
   vote_average: number;
   overview: string;
   genre_ids: number[];
+  adult?: boolean;
 }
 
 export interface TMDBSearchResponse {
