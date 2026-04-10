@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { posterUrl } from "@/lib/tmdb-client";
+import { decryptNote } from "@/lib/note-encryption";
 import { DashboardClient } from "@/components/dashboard-client";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ShareButton } from "@/components/share-button";
@@ -38,7 +39,7 @@ export default async function DashboardPage() {
     rating: m.voteAverage ?? undefined,
     watchedAt: m.watchedAt.toISOString(),
     userRating: m.userRating ?? undefined,
-    note: m.note ?? undefined,
+    note: m.note ? (decryptNote(m.note) ?? undefined) : undefined,
     mediaType: (m.mediaType === "tv" ? "tv" : "movie") as "movie" | "tv",
     genres: m.genres ?? [],
   }));
