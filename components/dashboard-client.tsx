@@ -45,10 +45,29 @@ export function DashboardClient({ initialMovies, initialWatchLater }: DashboardC
   // Reset display count when filters/sort change
   useEffect(() => { setDisplayCount(24); }, [searchQuery, sortBy, mediaFilter, genreFilter, activeTab]);
 
-  // Infinite scroll — reveal 24 more when sentinel enters viewport
+  const filtered = useMemo(() => {
+    let result = movies;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((m) => m.title.toLowerCase().includes(q));
+    }
+    if (mediaFilter !== "all") result = result.filter((m) => (m.mediaType ?? "movie") === mediaFilter);
+    if (genreFilter !== "all") result = result.filter((m) => m.genres?.includes(genreFilter));
+    return result;
+  }, [movies, searchQuery, mediaFilter, genreFilter]);
+
+  const sortedMovies = useMemo(() => sortMovies(filtered, sortBy), [filtered, sortBy]);
+  const visibleMovies = sortedMovies.slice(0, displayCount);
+  const hasMore = displayCount < sortedMovies.length;
+
+  // Infinite scroll — reveal 24 more when sentinel enters viewport.
+  // Depends on displayCount so the observer is re-created after each batch;
+  // this catches the case where the sentinel never leaves the viewport
+  // (too few remaining items to push it out), which would otherwise prevent
+  // the last 1-2 movies from loading.
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    if (!sentinel || !hasMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) setDisplayCount((c) => c + 24);
@@ -57,7 +76,7 @@ export function DashboardClient({ initialMovies, initialWatchLater }: DashboardC
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, []);
+  }, [hasMore, displayCount]);
 
   async function handleUnwatch(movie: MovieCardData) {
     const id = String(movie.id);
@@ -158,21 +177,6 @@ export function DashboardClient({ initialMovies, initialWatchLater }: DashboardC
     movies.forEach((m) => m.genres?.forEach((g) => set.add(g)));
     return Array.from(set).sort();
   }, [movies]);
-
-  const filtered = useMemo(() => {
-    let result = movies;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((m) => m.title.toLowerCase().includes(q));
-    }
-    if (mediaFilter !== "all") result = result.filter((m) => (m.mediaType ?? "movie") === mediaFilter);
-    if (genreFilter !== "all") result = result.filter((m) => m.genres?.includes(genreFilter));
-    return result;
-  }, [movies, searchQuery, mediaFilter, genreFilter]);
-
-  const sortedMovies = useMemo(() => sortMovies(filtered, sortBy), [filtered, sortBy]);
-  const visibleMovies = sortedMovies.slice(0, displayCount);
-  const hasMore = displayCount < sortedMovies.length;
 
   const watchedIds = new Set(movies.map((m) => String(m.id)));
 
