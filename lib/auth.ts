@@ -13,6 +13,11 @@ export const auth = betterAuth({
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24 * 7, // refresh token once per week
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // 5-minute client-side cache avoids extra fetch on every page
+    },
   },
   rateLimit: {
     enabled: true,

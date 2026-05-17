@@ -11,7 +11,7 @@ import { HaveYouLogo } from "@/components/have-you-logo";
 
 export function Navbar() {
   const router = useRouter();
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
 
   async function handleSignOut() {
     await authClient.signOut();
@@ -27,7 +27,7 @@ export function Navbar() {
           <span>have you<span className="text-muted-foreground">...</span> watched?</span>
         </Link>
         <div className="flex items-center gap-2">
-          {session ? (
+          {!isPending && (session ? (
             <nav className="flex items-center gap-4">
               <Link href="/dashboard" className="text-sm hover:underline">
                 Dashboard
@@ -48,7 +48,7 @@ export function Navbar() {
                 Sign up
               </Link>
             </nav>
-          )}
+          ))}
           <ThemeToggle />
         </div>
       </div>
