@@ -103,23 +103,19 @@ export default async function StatsPage() {
             Monthly Activity
           </h2>
           <div className="flex items-end gap-1 h-28">
-            {months.map(({ label, count }) => (
-              <div key={label} className="flex-1 flex flex-col items-center gap-1 group">
-                {count > 0 && (
-                  <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    {count}
-                  </span>
-                )}
-                <div
-                  className="w-full bg-primary/20 rounded-sm hover:bg-primary/50 transition-colors"
-                  style={{
-                    height: count > 0 ? `${Math.max((count / maxMonthCount) * 100, 4)}%` : "2px",
-                    opacity: count === 0 ? 0.3 : 1,
-                  }}
-                />
-                <span className="text-[9px] text-muted-foreground">{label}</span>
-              </div>
-            ))}
+            {months.map(({ label, count }) => {
+              const barPx = count > 0 ? Math.max(Math.round((count / maxMonthCount) * 80), 4) : 2;
+              return (
+                <div key={label} className="flex-1 flex flex-col items-center gap-1">
+                  <div
+                    title={count > 0 ? String(count) : undefined}
+                    className="w-full bg-primary/20 rounded-sm hover:bg-primary/50 transition-colors"
+                    style={{ height: `${barPx}px`, opacity: count === 0 ? 0.3 : 1 }}
+                  />
+                  <span className="text-[9px] text-muted-foreground">{label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -183,8 +179,8 @@ export default async function StatsPage() {
             <div className="space-y-3">
               {ratingDist.map(({ stars, count }) => (
                 <div key={stars} className="flex items-center gap-3">
-                  <span className="text-xs text-amber-500 w-10 shrink-0 font-medium">
-                    {"★".repeat(stars)}
+                  <span className="text-xs text-amber-500 w-8 shrink-0 font-medium whitespace-nowrap">
+                    {stars}★
                   </span>
                   <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
