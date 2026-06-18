@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Metadata } from "next";
-import { Search } from "lucide-react";
+import { BarChart2, Search } from "lucide-react";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { posterUrl } from "@/lib/tmdb-client";
@@ -66,6 +66,10 @@ export default async function DashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ShareButton />
+          <Link href="/dashboard/stats" className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+            <BarChart2 className="h-4 w-4 mr-2" />
+            Stats
+          </Link>
 <Link href="/search" className={cn(buttonVariants({ size: "sm" }))}>
             <Search className="h-4 w-4 mr-2" />
             Search Movies
