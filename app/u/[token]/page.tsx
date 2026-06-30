@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { MovieGrid } from "@/components/movie-grid";
+import { SharedPageClient } from "@/components/shared-page-client";
 import { posterUrl } from "@/lib/tmdb-client";
 
 interface Props {
@@ -47,23 +47,12 @@ export default async function PublicSharePage({ params }: Props) {
     title: m.movieTitle,
     posterUrl: posterUrl(m.posterPath ?? null),
     posterPath: m.posterPath ?? null,
-    releaseYear: null,
+    releaseYear: m.releaseYear ?? null,
     watchedAt: m.watchedAt.toISOString(),
     userRating: m.userRating ?? undefined,
+    mediaType: (m.mediaType ?? "movie") as "movie" | "tv",
+    genres: m.genres ?? [],
   }));
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">{share.user.name}&apos;s Watched Movies</h1>
-        <p className="text-muted-foreground mt-1">{movies.length} movie{movies.length !== 1 ? "s" : ""} watched</p>
-      </div>
-      <MovieGrid
-        movies={movies}
-        watchedIds={new Set(movies.map((m) => String(m.id)))}
-        showWatchButton={false}
-        emptyMessage="No movies watched yet."
-      />
-    </div>
-  );
+  return <SharedPageClient movies={movies} userName={share.user.name ?? "Someone"} />;
 }
