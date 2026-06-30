@@ -37,13 +37,14 @@ export function DashboardClient({ initialMovies, initialWatchLater }: DashboardC
   const [sortBy, setSortBy] = useState<SortBy>("date-desc");
   const [mediaFilter, setMediaFilter] = useState<FilterMediaType>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
+  const [yearFilter, setYearFilter] = useState<string>("all");
   const [selectedMovie, setSelectedMovie] = useState<MovieCardData | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>("watched");
   const [displayCount, setDisplayCount] = useState(24);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Reset display count when filters/sort change
-  useEffect(() => { setDisplayCount(24); }, [searchQuery, sortBy, mediaFilter, genreFilter, activeTab]);
+  useEffect(() => { setDisplayCount(24); }, [searchQuery, sortBy, mediaFilter, genreFilter, yearFilter, activeTab]);
 
   const filtered = useMemo(() => {
     let result = movies;
@@ -53,8 +54,9 @@ export function DashboardClient({ initialMovies, initialWatchLater }: DashboardC
     }
     if (mediaFilter !== "all") result = result.filter((m) => (m.mediaType ?? "movie") === mediaFilter);
     if (genreFilter !== "all") result = result.filter((m) => m.genres?.includes(genreFilter));
+    if (yearFilter !== "all") result = result.filter((m) => m.releaseYear === yearFilter);
     return result;
-  }, [movies, searchQuery, mediaFilter, genreFilter]);
+  }, [movies, searchQuery, mediaFilter, genreFilter, yearFilter]);
 
   const sortedMovies = useMemo(() => sortMovies(filtered, sortBy), [filtered, sortBy]);
   const visibleMovies = sortedMovies.slice(0, displayCount);
@@ -178,6 +180,12 @@ export function DashboardClient({ initialMovies, initialWatchLater }: DashboardC
     return Array.from(set).sort();
   }, [movies]);
 
+  const allYears = useMemo(() => {
+    const set = new Set<string>();
+    movies.forEach((m) => { if (m.releaseYear) set.add(m.releaseYear); });
+    return Array.from(set).sort((a, b) => Number(b) - Number(a));
+  }, [movies]);
+
   const watchedIds = new Set(movies.map((m) => String(m.id)));
 
   if (movies.length === 0 && watchLater.length === 0) {
@@ -278,6 +286,19 @@ export function DashboardClient({ initialMovies, initialWatchLater }: DashboardC
                   <option value="all">All genres</option>
                   {allGenres.map((g) => (
                     <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              )}
+
+              {allYears.length > 0 && (
+                <select
+                  value={yearFilter}
+                  onChange={(e) => setYearFilter(e.target.value)}
+                  className="text-sm border rounded-md px-3 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="all">All years</option>
+                  {allYears.map((y) => (
+                    <option key={y} value={y}>{y}</option>
                   ))}
                 </select>
               )}
