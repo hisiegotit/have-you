@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div
       style={{
         display: "flex",
-        height: "calc(100vh - 56px)", // 56px = h-14 navbar
+        height: "100vh",
       }}
     >
       <AuthBrandPanel />

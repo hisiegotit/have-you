@@ -1,22 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { HaveYouLogo } from "@/components/have-you-logo";
+
+const AUTH_ROUTES = ["/login", "/signup", "/forgot-password", "/reset-password"];
 
 export function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, isPending } = authClient.useSession();
 
   async function handleSignOut() {
     await authClient.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  if (AUTH_ROUTES.includes(pathname)) {
+    return null;
   }
 
   return (
@@ -49,7 +55,6 @@ export function Navbar() {
               </Link>
             </nav>
           ))}
-          <ThemeToggle />
         </div>
       </div>
     </header>
