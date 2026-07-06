@@ -1,6 +1,12 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 interface SendResetPasswordEmailParams {
   to: string;
@@ -8,13 +14,13 @@ interface SendResetPasswordEmailParams {
 }
 
 export async function sendResetPasswordEmail({ to, url }: SendResetPasswordEmailParams): Promise<void> {
-  const from = process.env.EMAIL_FROM;
+  const from = process.env.GMAIL_USER;
   if (!from) {
-    throw new Error("EMAIL_FROM is not configured");
+    throw new Error("GMAIL_USER is not configured");
   }
 
-  const { error } = await resend.emails.send({
-    from,
+  await transporter.sendMail({
+    from: `"Have You" <${from}>`,
     to,
     subject: "Reset your password",
     html: `
@@ -26,8 +32,4 @@ export async function sendResetPasswordEmail({ to, url }: SendResetPasswordEmail
       </div>
     `,
   });
-
-  if (error) {
-    throw new Error(`Failed to send reset password email: ${error.message}`);
-  }
 }
