@@ -4,87 +4,106 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PasswordInput } from "@/components/password-input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
+import { PasswordInput } from "@/components/password-input";
+
+const C = {
+  card:      "oklch(0.205 0 0)",
+  fg:        "oklch(0.985 0 0)",
+  muted:     "oklch(0.56 0 0)",
+  label:     "oklch(0.75 0 0)",
+  border:    "oklch(1 0 0 / 12%)",
+  primary:   "oklch(0.922 0 0)",
+  primaryFg: "oklch(0.12 0 0)",
+  subtle:    "oklch(1 0 0 / 8%)",
+  link:      "oklch(0.78 0 0)",
+};
+
+const inputStyle: React.CSSProperties = {
+  height: "44px",
+  background: C.card,
+  border: `1.5px solid ${C.border}`,
+  borderRadius: "10px",
+  padding: "0 14px",
+  color: C.fg,
+  fontSize: "0.875rem",
+  width: "100%",
+  outline: "none",
+  fontFamily: "inherit",
+};
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName]         = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]   = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     const { error } = await authClient.signUp.email({ name, email, password });
     setLoading(false);
-    if (error) {
-      toast.error(error.message ?? "Sign up failed");
-      return;
-    }
+    if (error) { toast.error(error.message ?? "Sign up failed"); return; }
     router.push("/dashboard");
     router.refresh();
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create account</CardTitle>
-        <CardDescription>Sign up to start tracking your movies</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-5 pb-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              autoComplete="name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <PasswordInput
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account…" : "Create account"}
-          </Button>
-          <p className="text-sm text-muted-foreground text-center">
-            Already have an account?{" "}
-            <Link href="/login" className="underline underline-offset-4">
-              Sign in
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
-    </Card>
+    <form onSubmit={handleSubmit}>
+      <div style={{ marginBottom: "32px" }}>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 600, letterSpacing: "-0.025em", color: C.fg, marginBottom: "6px" }}>
+          Join the crew
+        </h1>
+        <p style={{ fontSize: "0.875rem", color: C.muted }}>Start tracking the films you love</p>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "20px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+          <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: C.label }}>Name</label>
+          <input
+            type="text" value={name} onChange={e => setName(e.target.value)}
+            placeholder="Your name" required autoComplete="name"
+            style={inputStyle}
+          />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+          <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: C.label }}>Email</label>
+          <input
+            type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="you@example.com" required autoComplete="email"
+            style={inputStyle}
+          />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+          <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: C.label }}>Password</label>
+          <PasswordInput
+            value={password} onChange={e => setPassword(e.target.value)}
+            placeholder="Min. 8 characters"
+            required minLength={8} autoComplete="new-password"
+            style={{ ...inputStyle, padding: "0 44px 0 14px" } as React.CSSProperties}
+          />
+        </div>
+      </div>
+
+      <button
+        type="submit" disabled={loading}
+        style={{
+          width: "100%", height: "44px", background: C.primary,
+          color: C.primaryFg, border: "none", borderRadius: "10px",
+          fontSize: "0.9rem", fontWeight: 600, cursor: "pointer",
+          letterSpacing: "-0.01em", opacity: loading ? 0.7 : 1,
+        }}
+      >
+        {loading ? "Creating account…" : "Create account"}
+      </button>
+
+      <div style={{ marginTop: "28px", paddingTop: "20px", borderTop: `1px solid ${C.subtle}`, textAlign: "center" }}>
+        <span style={{ fontSize: "0.875rem", color: C.muted }}>Already a member? </span>
+        <Link href="/login" style={{ fontSize: "0.875rem", fontWeight: 500, color: C.link }}>
+          Sign in
+        </Link>
+      </div>
+    </form>
   );
 }
