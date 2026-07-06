@@ -253,6 +253,56 @@ export async function getTrendingTV(page = 1): Promise<TMDBSearchResponse> {
   return { results: raw.results.filter((s) => !isAdult(s)).map(normalizeTVShow), total_pages: raw.total_pages, total_results: raw.total_results };
 }
 
+/** Popular Korean drama TV shows, sorted by popularity */
+export async function getKoreanDramas(page = 1): Promise<TMDBSearchResponse> {
+  const raw = await tmdbFetch<{ results: TMDBTVShow[]; total_pages: number; total_results: number }>(
+    "/discover/tv",
+    { with_origin_country: "KR", sort_by: "popularity.desc", page: String(page), include_adult: "false" },
+  );
+  return { results: raw.results.filter((s) => !isAdult(s)).map(normalizeTVShow), total_pages: raw.total_pages, total_results: raw.total_results };
+}
+
+export interface AuthPanelPoster {
+  id: number;
+  title: string;
+  year: string;
+  posterUrl: string;
+}
+
+function toAuthPanelPoster(item: TMDBMovie): AuthPanelPoster | null {
+  const url = posterUrl(item.poster_path, "w342");
+  if (!url) return null;
+  return {
+    id: item.id,
+    title: item.title,
+    year: item.release_date ? item.release_date.slice(0, 4) : "",
+    posterUrl: url,
+  };
+}
+
+/** Mix of trending movies/TV and Korean dramas for the auth screen's floating poster wall */
+export async function getAuthPanelPosters(): Promise<AuthPanelPoster[]> {
+  const [movies, tv, kdramas] = await Promise.all([
+    getTrendingMovies(1),
+    getTrendingTV(1),
+    getKoreanDramas(1),
+  ]);
+
+  const combined = [
+    ...movies.results.slice(0, 14).map(toAuthPanelPoster),
+    ...tv.results.slice(0, 6).map(toAuthPanelPoster),
+    ...kdramas.results.slice(0, 10).map(toAuthPanelPoster),
+  ].filter((p): p is AuthPanelPoster => p !== null);
+
+  // Fisher-Yates shuffle so kdramas are interleaved rather than clumped
+  for (let i = combined.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [combined[i], combined[j]] = [combined[j], combined[i]];
+  }
+
+  return combined;
+}
+
 /** Search movies/TV by actor name — finds the best-matching person then returns their credits */
 export async function searchByActor(name: string, type: "movie" | "tv" = "movie", page = 1): Promise<TMDBSearchResponse> {
   const people = await tmdbFetch<{ results: Array<{ id: number }> }>(
