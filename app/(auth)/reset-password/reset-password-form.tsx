@@ -8,18 +8,17 @@ import { authClient } from "@/lib/auth-client";
 import { PasswordInput } from "@/components/password-input";
 
 const C = {
-  card:      "oklch(0.205 0 0)",
-  fg:        "oklch(0.985 0 0)",
-  muted:     "oklch(0.56 0 0)",
-  label:     "oklch(0.75 0 0)",
-  border:    "oklch(1 0 0 / 12%)",
-  primary:   "oklch(0.922 0 0)",
-  primaryFg: "oklch(0.12 0 0)",
+  fg:        "var(--foreground)",
+  muted:     "var(--muted-foreground)",
+  label:     "var(--foreground)",
+  border:    "var(--border)",
+  primary:   "var(--primary)",
+  primaryFg: "var(--primary-foreground)",
 };
 
 const inputStyle: React.CSSProperties = {
   height: "44px",
-  background: C.card,
+  background: "var(--muted)",
   border: `1.5px solid ${C.border}`,
   borderRadius: "10px",
   padding: "0 44px 0 14px",

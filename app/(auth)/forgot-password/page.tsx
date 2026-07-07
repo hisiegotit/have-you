@@ -6,20 +6,19 @@ import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 
 const C = {
-  card:      "oklch(0.205 0 0)",
-  fg:        "oklch(0.985 0 0)",
-  muted:     "oklch(0.56 0 0)",
-  label:     "oklch(0.75 0 0)",
-  border:    "oklch(1 0 0 / 12%)",
-  primary:   "oklch(0.922 0 0)",
-  primaryFg: "oklch(0.12 0 0)",
-  elevated:  "oklch(0.20 0 0)",
-  elevFg:    "oklch(0.78 0 0)",
+  fg:        "var(--foreground)",
+  muted:     "var(--muted-foreground)",
+  label:     "var(--foreground)",
+  border:    "var(--border)",
+  primary:   "var(--primary)",
+  primaryFg: "var(--primary-foreground)",
+  elevated:  "var(--muted)",
+  elevFg:    "var(--foreground)",
 };
 
 const inputStyle: React.CSSProperties = {
   height: "44px",
-  background: C.card,
+  background: "var(--muted)",
   border: `1.5px solid ${C.border}`,
   borderRadius: "10px",
   padding: "0 14px",
@@ -51,7 +50,7 @@ export default function ForgotPasswordPage() {
           width: "56px", height: "56px", background: C.elevated, borderRadius: "14px",
           display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 28px",
         }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="oklch(0.72 0 0)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
             <rect x="2" y="4" width="20" height="16" rx="2" />
             <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
           </svg>
