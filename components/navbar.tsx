@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -60,12 +61,14 @@ export function Navbar() {
                   </Avatar>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium">{session.user.name}</span>
-                      <span className="text-xs text-muted-foreground">{session.user.email}</span>
-                    </div>
-                  </DropdownMenuLabel>
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-medium">{session.user.name}</span>
+                        <span className="text-xs text-muted-foreground">{session.user.email}</span>
+                      </div>
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push("/settings")}>
                     <Settings className="h-4 w-4" />
