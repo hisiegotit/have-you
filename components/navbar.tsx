@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Settings } from "lucide-react";
+import { Dices, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -48,6 +48,10 @@ export function Navbar() {
             <nav className="flex items-center gap-4">
               <Link href="/dashboard" className="text-sm hover:underline">
                 Dashboard
+              </Link>
+              <Link href="/roulette" className="flex items-center gap-1.5 text-sm hover:underline">
+                <Dices className="h-4 w-4 text-amber-400" />
+                Roulette
               </Link>
               <Link href="/search" className="text-sm hover:underline">
                 Search

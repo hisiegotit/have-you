@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { posterUrl } from "@/lib/tmdb-client";
 import { decryptNote } from "@/lib/note-encryption";
+import { getWatchLaterMovies } from "@/lib/watch-later";
 import { DashboardClient } from "@/components/dashboard-client";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ShareButton } from "@/components/share-button";
@@ -18,15 +19,12 @@ export default async function DashboardPage() {
   const session = await getSession();
   if (!session?.user) redirect("/login");
 
-  const [watched, watchLaterRows] = await Promise.all([
+  const [watched, watchLaterMovies] = await Promise.all([
     prisma.watchedMovie.findMany({
       where: { userId: session.user.id },
       orderBy: { watchedAt: "desc" },
     }),
-    prisma.watchLaterMovie.findMany({
-      where: { userId: session.user.id },
-      orderBy: { addedAt: "desc" },
-    }),
+    getWatchLaterMovies(session.user.id),
   ]);
 
   const movies = watched.map((m) => ({
@@ -39,17 +37,6 @@ export default async function DashboardPage() {
     watchedAt: m.watchedAt.toISOString(),
     userRating: m.userRating ?? undefined,
     note: m.note ? (decryptNote(m.note) ?? undefined) : undefined,
-    mediaType: (m.mediaType === "tv" ? "tv" : "movie") as "movie" | "tv",
-    genres: m.genres ?? [],
-  }));
-
-  const watchLaterMovies = watchLaterRows.map((m) => ({
-    id: m.movieId,
-    title: m.movieTitle,
-    posterUrl: posterUrl(m.posterPath ?? null),
-    posterPath: m.posterPath ?? null,
-    releaseYear: m.releaseYear ?? null,
-    rating: m.voteAverage ?? undefined,
     mediaType: (m.mediaType === "tv" ? "tv" : "movie") as "movie" | "tv",
     genres: m.genres ?? [],
   }));
