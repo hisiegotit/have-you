@@ -14,7 +14,7 @@ export const REEL_ITEM_GAP = 12;
 export const REEL_PITCH = REEL_ITEM_WIDTH + REEL_ITEM_GAP;
 
 /** Slot index the winner always occupies — long enough to feel like a real spin. */
-export const REEL_WINNER_SLOT = 40;
+export const REEL_WINNER_SLOT = 60;
 /** Extra slots after the winner so the strip never runs out on the right edge. */
 const REEL_TAIL_SLOTS = 6;
 /** Slots visible to the left of the marker before the spin starts. */
@@ -27,8 +27,14 @@ const REEL_START_SLOTS = 2;
  */
 const REEL_JITTER_RATIO = 0.28;
 
-/** Spin length in ms — lands on the silent beat right before the reveal hit. */
-export const REEL_SPIN_DURATION_MS = 7000;
+/**
+ * Fallback spin length in ms, matching the bundled case-open audio.
+ *
+ * The reel is meant to stop exactly when the sound ends, so the real duration
+ * is read from the audio element at roll time. This value only applies when
+ * the audio has no readable duration (still loading, or failed to load).
+ */
+export const REEL_SPIN_DURATION_MS = 10540;
 
 /** Where the strip sits before the spin starts. */
 export const REEL_START_OFFSET = REEL_START_SLOTS * REEL_PITCH;

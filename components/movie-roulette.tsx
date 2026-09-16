@@ -16,7 +16,7 @@ import {
   type ReelPlan,
 } from "@/lib/roulette-reel";
 
-const SOUND_SRC = "/sounds/csgo-case-open.mp3";
+const SOUND_SRC = "/sounds/csgo-case-open-v2.mp3";
 const SOUND_VOLUME = 0.7;
 /** Deceleration curve: fast launch, long glide, hard stop — mirrors the case-open audio. */
 const SPIN_EASING = "cubic-bezier(0.08, 0.72, 0.12, 1)";
@@ -44,6 +44,23 @@ export function MovieRoulette({ movies, onMarkWatched, marking = false }: MovieR
   const stripRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Duration of the in-flight spin, set at roll time from the audio length. */
+  const spinDurationRef = useRef(REEL_SPIN_DURATION_MS);
+
+  /** Build the audio element up front so its duration is known by the first roll. */
+  const getAudio = useCallback(() => {
+    if (!audioRef.current) {
+      const audio = new Audio(SOUND_SRC);
+      audio.volume = SOUND_VOLUME;
+      audio.preload = "metadata";
+      audioRef.current = audio;
+    }
+    return audioRef.current;
+  }, []);
+
+  useEffect(() => {
+    getAudio();
+  }, [getAudio]);
 
   const stopAudio = useCallback(() => {
     const audio = audioRef.current;
@@ -70,16 +87,20 @@ export function MovieRoulette({ movies, onMarkWatched, marking = false }: MovieR
     setPlan(nextPlan);
 
     stopAudio();
-    if (!audioRef.current) {
-      audioRef.current = new Audio(SOUND_SRC);
-      audioRef.current.volume = SOUND_VOLUME;
-    }
+    const audio = getAudio();
+
+    // The reel must stop exactly when the sound ends, so the spin is timed to
+    // the real audio length; the constant only covers metadata not being ready.
+    spinDurationRef.current = Number.isFinite(audio.duration) && audio.duration > 0
+      ? audio.duration * 1000
+      : REEL_SPIN_DURATION_MS;
+
     // Autoplay can still be blocked (muted tab, iOS silent switch) — the spin
     // must not depend on the sound, so failures are ignored.
-    void audioRef.current.play().catch(() => {});
+    void audio.play().catch(() => {});
 
     setPhase(prefersReducedMotion() ? "result" : "spinning");
-  }, [movies, stopAudio]);
+  }, [movies, stopAudio, getAudio]);
 
   // Drive the spin imperatively: the strip must be repainted at the start
   // position before the transition to the landing position is attached.
@@ -99,11 +120,12 @@ export function MovieRoulette({ movies, onMarkWatched, marking = false }: MovieR
     node.style.transform = `translate3d(${-REEL_START_OFFSET}px, 0, 0)`;
     node.getBoundingClientRect(); // force reflow so the start position is committed
 
-    node.style.transition = `transform ${REEL_SPIN_DURATION_MS}ms ${SPIN_EASING}`;
+    const durationMs = spinDurationRef.current;
+    node.style.transition = `transform ${durationMs}ms ${SPIN_EASING}`;
     node.style.transform = `translate3d(${-plan.offsetPx}px, 0, 0)`;
 
     // Timer rather than transitionend: a backgrounded tab can drop the event.
-    settleTimerRef.current = setTimeout(() => setPhase("result"), REEL_SPIN_DURATION_MS);
+    settleTimerRef.current = setTimeout(() => setPhase("result"), durationMs);
     return () => {
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
     };
